@@ -2,13 +2,20 @@ import { canonicalCI, COLOURLESS, COLOURS_WITH_C } from "../lib/identity";
 
 type Pip = typeof COLOURS_WITH_C[number];
 
+import pipW from "../assets/pips/W.svg";
+import pipU from "../assets/pips/U.svg";
+import pipB from "../assets/pips/B.svg";
+import pipR from "../assets/pips/R.svg";
+import pipG from "../assets/pips/G.svg";
+import pipC from "../assets/pips/C.svg";
+
 const PIP_SRC: Record<Pip, string> = {
-  C: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/1/1a/C.svg/revision/latest?cb=20160121092204",
-  W: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/8/8e/W.svg/revision/latest?cb=20160125094923",
-  U: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/9/9f/U.svg/revision/latest?cb=20160121092256",
-  B: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/2/2f/B.svg/revision/latest?cb=20160125093423",
-  R: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/8/87/R.svg/revision/latest?cb=20160125094913",
-  G: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/8/88/G.svg/revision/latest?cb=20160125094907",
+  W: pipW,
+  U: pipU,
+  B: pipB,
+  R: pipR,
+  G: pipG,
+  C: pipC,
 };
 
 export function ColourPips({
