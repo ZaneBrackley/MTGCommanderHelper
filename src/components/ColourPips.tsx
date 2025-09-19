@@ -3,12 +3,12 @@ import { canonicalCI, COLOURLESS, COLOURS_WITH_C } from "../lib/identity";
 type Pip = typeof COLOURS_WITH_C[number];
 
 const PIP_SRC: Record<Pip, string> = {
-  C: "/pips/C.svg",
-  W: "/pips/W.svg",
-  U: "/pips/U.svg",
-  B: "/pips/B.svg",
-  R: "/pips/R.svg",
-  G: "/pips/G.svg",
+  C: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/1/1a/C.svg/revision/latest?cb=20160121092204",
+  W: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/8/8e/W.svg/revision/latest?cb=20160125094923",
+  U: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/9/9f/U.svg/revision/latest?cb=20160121092256",
+  B: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/2/2f/B.svg/revision/latest?cb=20160125093423",
+  R: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/8/87/R.svg/revision/latest?cb=20160125094913",
+  G: "https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/8/88/G.svg/revision/latest?cb=20160125094907",
 };
 
 export function ColourPips({
