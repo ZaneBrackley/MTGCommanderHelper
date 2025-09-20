@@ -9,6 +9,7 @@ export type CommanderRow = {
   scryfallUri?: string;
   image?: string | null;
   edhrecRank?: number | null;
+  edhrecUri?: string;
   partnerKind?:
     | "none"
     | "partner"
@@ -98,6 +99,8 @@ export function mergeDumpIntoCommanders(
       ...(Array.isArray(row.partnerWithNames)
         ? { partnerWithNames: row.partnerWithNames }
         : {}),
+        edhrecRank: row.edhrecRank ?? undefined,
+        edhrecUri: row.edhrecUri,
     });
   }
 

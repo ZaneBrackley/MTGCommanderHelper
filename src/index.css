@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+/* Base: enables clamping in old + new engines */
+.clamp{
+  overflow: hidden;
+  display: -webkit-box;        /* legacy engine for -webkit-line-clamp */
+  -webkit-box-orient: vertical;
+}
+
+/* Modifiers: choose how many lines to keep */
+.clamp-1{ line-clamp: 1; -webkit-line-clamp: 1; }
+.clamp-2{ line-clamp: 2; -webkit-line-clamp: 2; }
+.clamp-3{ line-clamp: 3; -webkit-line-clamp: 3; }
+
+/* Optional: when the standard prop is supported, we don't need -webkit-box */
+@supports (line-clamp: 2){
+  .clamp{ display: block; }
+}

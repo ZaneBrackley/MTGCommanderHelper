@@ -10,7 +10,7 @@ export default function App() {
       <header className="sticky top-0 z-10 backdrop-blur bg-neutral-950/70 border-b border-neutral-800">
         {/* ⬇️ remove mx-auto/max-w; keep some padding */}
         <div className="px-4 py-4 flex items-center gap-4">
-          <span className="text-lg font-semibold">Commander Picker</span>
+          <span className="text-lg font-semibold">Commander Helper</span>
           <nav className="ml-auto flex gap-4 text-sm">
             <Link className="hover:underline" to="/search">Search</Link>
             <Link className="hover:underline" to="/challenge">32-Deck Challenge</Link>

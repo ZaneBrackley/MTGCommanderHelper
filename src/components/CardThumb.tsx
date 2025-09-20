@@ -1,6 +1,6 @@
 export default function CardThumb({
   src, alt, href, fit = "contain",
-}: { src?: string | null; alt: string; href?: string; fit?: "contain" | "cover"; }) {
+}: { src?: string | null; alt: string; href?: string; fit?: "contain" | "cover";}) {
   const classFit = fit === "cover" ? "object-cover" : "object-contain";
   
   const img = (
@@ -8,7 +8,7 @@ export default function CardThumb({
       src={src || ""}
       alt={alt}
       loading="lazy"
-      className={`w-63 h-88 inset-0 rounded-xl border border-neutral-800 bg-neutral-800 ${classFit}`}
+      className={`w-full h-full inset-0 rounded-xl border border-neutral-800 bg-neutral-800 ${classFit}`}
       onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
     />
   );

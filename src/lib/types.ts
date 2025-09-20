@@ -8,6 +8,8 @@ export type Commander = {
   tagCounts?: Record<string, number>;
   partnerKind?: "none" | "partner" | "partnerWith" | "friendsForever" | "chooseBackground" | "background";
   partnerWithNames?: string[];
+  edhrecRank?: number;
+  edhrecUri?: string;
 };
 
 export type ChallengeLock = Record<string, string>; // colourIdentity -> commanderId

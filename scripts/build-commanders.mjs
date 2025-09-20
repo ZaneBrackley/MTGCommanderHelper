@@ -89,6 +89,7 @@ function mapCard(card) {
     image: pickImage(card),
     scryfallUri: card.scryfall_uri,
     edhrecRank: card.edhrec_rank ?? null,
+    edhrecUri: card.related_uris.edhrec,
     ...partner,
   };
 }

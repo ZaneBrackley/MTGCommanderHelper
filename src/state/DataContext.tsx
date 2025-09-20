@@ -27,6 +27,7 @@ type Ctx = {
   deleteCommander: (id: string) => void;
   assignChallenge: (ci: string, choice: ChallengeChoice) => void;
   replaceCommanders: (next: Commander[]) => void;
+  clearChallenge: (ci: string) => void;
 };
 
 const KEY = "mtg-commander-picker:v1";
@@ -52,9 +53,9 @@ function toCommanderFromStored(u: unknown): Commander {
   const id =
     typeof r.id === "string"
       ? r.id
-      : (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : Math.random().toString(36).slice(2, 10));
+      : typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2, 10);
 
   const name = typeof r.name === "string" ? r.name : "";
   const colourIdentity = canonicalCI(
@@ -63,19 +64,20 @@ function toCommanderFromStored(u: unknown): Commander {
 
   const scryfall = typeof r.scryfall === "string" ? r.scryfall : undefined;
   const image = typeof r.image === "string" ? r.image : null;
+  const edhrecUri = typeof r.edhrecUri === "string" ? r.edhrecUri : undefined;
 
   const partnerKind: PartnerKind =
     (typeof r.partnerKind === "string"
       ? (r.partnerKind as PartnerKind)
       : "none") ?? "none";
 
-  const partnerWithNames =
-    Array.isArray(r.partnerWithNames) ?
-      (r.partnerWithNames as unknown[]).map(String) :
-      undefined;
+  const partnerWithNames = Array.isArray(r.partnerWithNames)
+    ? (r.partnerWithNames as unknown[]).map(String)
+    : undefined;
 
-  const tags =
-    Array.isArray(r.tags) ? (r.tags as unknown[]).map(String) : undefined;
+  const tags = Array.isArray(r.tags)
+    ? (r.tags as unknown[]).map(String)
+    : undefined;
 
   let tagCounts: Record<string, number> | undefined;
   if (isRecord(r.tagCounts)) {
@@ -84,7 +86,6 @@ function toCommanderFromStored(u: unknown): Commander {
       entries.filter(([, n]) => Number.isFinite(n))
     ) as Record<string, number>;
   }
-
   return {
     id,
     name,
@@ -95,6 +96,7 @@ function toCommanderFromStored(u: unknown): Commander {
     ...(partnerWithNames ? { partnerWithNames } : {}),
     ...(tags ? { tags } : {}),
     ...(tagCounts ? { tagCounts } : {}),
+    edhrecUri,
   };
 }
 
@@ -148,7 +150,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (isRecord(v) && typeof v.primaryId === "string") {
           challenge[key] = {
             primaryId: v.primaryId as string,
-            ...(typeof v.partnerId === "string" ? { partnerId: v.partnerId as string } : {}),
+            ...(typeof v.partnerId === "string"
+              ? { partnerId: v.partnerId as string }
+              : {}),
           };
         } else if (typeof v === "string") {
           challenge[key] = { primaryId: v };
@@ -227,6 +231,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }),
       replaceCommanders: (next: Commander[]) =>
         setData((d) => ({ ...d, commanders: next })),
+      clearChallenge: (ci: string) =>
+        setData((d) => {
+          const key = canonicalCI(ci);
+          const next = { ...d.challenge };
+          delete next[key];
+          return { ...d, challenge: next };
+        }),
     }),
     [data]
   );

@@ -18,6 +18,8 @@ function normal(s: string) {
   return fold(String(s));
 }
 
+type SortMode = "name:asc" | "name:desc" | "edhrec:asc" | "edhrec:desc";
+
 function findDirectPartner(
   base: Commander,
   all: Commander[]
@@ -46,6 +48,15 @@ function findDirectPartner(
   return candidate && candidate.id !== base.id ? candidate : undefined;
 }
 
+function scryfallImgById(
+  id: string,
+  face: "front" | "back" = "front",
+  version: "normal" | "large" = "normal"
+) {
+  const base = `https://api.scryfall.com/cards/${id}?format=image&version=${version}`;
+  return face === "back" ? `${base}&face=back` : base;
+}
+
 function ResultCard({
   base,
   all,
@@ -57,9 +68,40 @@ function ResultCard({
 }) {
   const partner = findDirectPartner(base, all);
   const [showPartner, setShowPartner] = useState(false);
+  const [hasBack, setHasBack] = useState<boolean>(false);
+  const [showBack, setShowBack] = useState(false);
 
   // Which card are we showing right now?
   const current = showPartner && partner ? partner : base;
+  const link = current.edhrecUri;
+
+  useEffect(() => {
+    // changing card resets transform state
+    setShowBack(false);
+
+    // quick gate: many cards have `//` in the name (adventure/split) but no back
+    if (!current.name.includes("//")) {
+      setHasBack(false);
+      return;
+    }
+
+    // preflight the back image; if it 404s, we hide the Transform button
+    const test = new Image();
+    const url = scryfallImgById(current.id, "back", "normal");
+    test.onload = () => setHasBack(true);
+    test.onerror = () => setHasBack(false);
+    test.src = url;
+
+    return () => {
+      // clean up handlers so late events don't flip state
+      test.onload = null;
+      test.onerror = null;
+    };
+  }, [current.id, current.name]);
+
+  const imgSrc = showBack
+    ? scryfallImgById(current.id, "back", "normal")
+    : current.image;
 
   // Build the right Assign action
   const handleAssign = () => {
@@ -75,44 +117,43 @@ function ResultCard({
     onAssign(current.colourIdentity, { primaryId: current.id });
   };
 
-  const flipBtn = partner ? (
-    <button
-      onClick={() => setShowPartner((v) => !v)}
-      className="px-2 py-1 rounded border border-neutral-700 text-xs hover:border-neutral-500"
-      title={`Show ${showPartner ? base.name : partner.name}`}
-    >
-      Flip to {showPartner ? base.name : partner.name}
-    </button>
-  ) : null;
-
   return (
-    <li className="p-4 rounded-xl border border-neutral-800 bg-neutral-900/40 space-y-2">
+    <li className="flex flex-col justify-center h-full w-full p-4 rounded-xl border border-neutral-800 bg-neutral-900/40">
       <CardThumb
-        src={current.image}
+        src={imgSrc}
         alt={`${current.name} card art`}
         href={current.scryfall}
       />
-
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{current.name}</h3>
-          <span className="text-xs border border-neutral-700 px-2 py-0.5 rounded">
+      <div className="mt-2">
+        <div className="grid grid-cols-[1fr_auto] items-start gap-2">
+          <h3 className="font-semibold clamp-2 min-w-0">
+            {link ? (
+              <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 decoration-dotted hover:decoration-solid break-words"
+              >
+                {current.name}
+              </a>
+            ) : (
+              current.name
+            )}
+          </h3>
+          <span className="text-xs border border-neutral-700 px-2 py-0.5 rounded justify-self-end">
             {current.colourIdentity}
           </span>
         </div>
-        {flipBtn}
       </div>
-
       {(current.tags?.length ?? 0) > 0 && (
-        <p className="text-xs text-neutral-400">
-          {current.tags!.slice(0, 8).join(" · ")}
+        <p className="text-xs text-neutral-400 clamp-2 min-h-[2.25rem] mt-2">
+          {current.tags!.slice(0, 12).join(" · ")}
         </p>
       )}
-
-      <div className="flex gap-2">
+      <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
         <button
           onClick={handleAssign}
-          className="px-3 py-1.5 rounded border border-emerald-500 text-emerald-300 hover:bg-emerald-500/10"
+          className="w-full inline-flex items-center justify-center px-2 py-1.5 rounded border border-emerald-500 text-emerald-300 hover:bg-emerald-500/10 text-center text-[15px] leading-tight"
         >
           {partner
             ? `Assign pair to ${unionCI(
@@ -121,6 +162,43 @@ function ResultCard({
               )}`
             : `Assign to ${current.colourIdentity}`}
         </button>
+        {partner && hasBack ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setShowPartner((v) => !v)}
+              className="w-full inline-flex items-center justify-center px-2 py-1.5 rounded border border-blue-500 text-blue-300 hover:bg-blue-500/10 text-center text-[15px] leading-tight"
+              title={`Show ${showPartner ? base.name : partner.name}`}
+            >
+              Flip to {showPartner ? base.name : partner.name}
+            </button>
+            <button
+              onClick={() => setShowBack((v) => !v)}
+              className="w-full inline-flex items-center justify-center px-2 py-1.5 rounded border border-gray-500 text-gray-300 hover:bg-gray-500/10 text-center text-[15px] leading-tight"
+              title={showBack ? "Show front" : "Show back / transformed"}
+            >
+              {showBack ? "Show Front" : "Transform"}
+            </button>
+          </div>
+        ) : partner ? (
+          <button
+            onClick={() => setShowPartner((v) => !v)}
+            className="w-full inline-flex items-center justify-center px-2 py-1.5 rounded border border-blue-500 text-blue-300 hover:bg-blue-500/10 text-center text-[15px] leading-tight"
+            title={`Show ${showPartner ? base.name : partner.name}`}
+          >
+            Flip to {showPartner ? base.name : partner.name}
+          </button>
+        ) : hasBack ? (
+          <button
+            onClick={() => setShowBack((v) => !v)}
+            className="w-full inline-flex items-center justify-center px-2 py-1.5 rounded border border-gray-500 text-gray-300 hover:bg-gray-500/10 text-center text-[15px] leading-tight"
+            title={showBack ? "Show front" : "Show back / transformed"}
+          >
+            {showBack ? "Show Front" : "Transform"}
+          </button>
+        ) : (
+          // neither present → keep the grid shape (empty right half)
+          <div />
+        )}
       </div>
     </li>
   );
@@ -147,6 +225,8 @@ export default function SearchPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // folded tags
   const [tagQ, setTagQ] = useState("");
   const [showAllTags, setShowAllTags] = useState(false);
+
+  const [sortBy, setSortBy] = useState<SortMode>("name:asc");
 
   // Build a tag index from current data (folded key → { label, count })
   const tagIndex = useMemo(() => {
@@ -206,18 +286,32 @@ export default function SearchPage() {
 
   const results = useMemo(() => {
     const ql = fold(q);
-    return data.commanders
+    const filtered = data.commanders
       .filter((c) => !ql || fold(c.name).includes(ql))
       .filter((c) => !activeCI || c.colourIdentity === activeCI)
       .filter((c) => {
         if (selectedTags.length === 0) return true;
         const tags = (c.tags ?? []).map(fold);
         if (tags.length === 0) return false;
-        // “Any” match behaviour
         return selectedTags.some((t) => tags.includes(t));
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [data.commanders, q, activeCI, selectedTags]);
+      });
+
+    return filtered.slice().sort((a, b) => {
+      if (sortBy === "name:asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name:desc") return b.name.localeCompare(a.name);
+      if (sortBy === "edhrec:asc") {
+        const ar = a.edhrecRank ?? Number.POSITIVE_INFINITY;
+        const br = b.edhrecRank ?? Number.POSITIVE_INFINITY;
+        if (ar !== br) return ar - br;
+        return a.name.localeCompare(b.name);
+      }
+      // edhrec:desc
+      const ar = a.edhrecRank ?? -1;
+      const br = b.edhrecRank ?? -1;
+      if (ar !== br) return br - ar;
+      return a.name.localeCompare(b.name);
+    });
+  }, [data.commanders, q, activeCI, selectedTags, sortBy]);
 
   // Stable import function
   const importFromJSON = useCallback(async () => {
@@ -326,6 +420,19 @@ export default function SearchPage() {
               Clear
             </button>
           </div>
+        </div>
+        <div>
+          <p className="text-sm text-neutral-400 mb-1">Sort by</p>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortMode)}
+            className="px-2 py-1 rounded-md bg-neutral-800 border border-neutral-700 outline-none text-sm w-full"
+          >
+            <option value="name:asc">Name A→Z</option>
+            <option value="name:desc">Name Z→A</option>
+            <option value="edhrec:asc">EDHREC Rank Ascending</option>
+            <option value="edhrec:desc">EDHREC Rank Descending</option>
+          </select>
         </div>
 
         {/* TAG FILTER */}
