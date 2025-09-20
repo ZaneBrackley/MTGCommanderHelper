@@ -10,13 +10,7 @@ export type CommanderRow = {
   image?: string | null;
   edhrecRank?: number | null;
   edhrecUri?: string;
-  partnerKind?:
-    | "none"
-    | "partner"
-    | "partnerWith"
-    | "friendsForever"
-    | "chooseBackground"
-    | "background";
+  partnerKind?: Commander["partnerKind"];
   partnerWithNames?: string[];
 };
 
@@ -74,35 +68,75 @@ export function mergeDumpIntoCommanders(
   dump: CommanderDump,
   existing: Commander[]
 ): Commander[] {
+  // Fast lookup by ID and by (name|CI)
+  const byId = new Map<string, Commander>();
   const byKey = new Map<string, Commander>();
+
   for (const c of existing) {
-    byKey.set(`${c.name}|${c.colourIdentity}`, c);
+    byId.set(c.id, c);
+    byKey.set(`${c.name}|${canonicalCI(c.colourIdentity)}`, c);
   }
 
   for (const row of dump.commanders) {
-    const name = row.name.trim();
+    const name = row.name?.trim();
     const ci = canonicalCI(row.colourIdentity);
     if (!name || !ci) continue;
 
     const key = `${name}|${ci}`;
-    if (byKey.has(key)) continue;
+    const current =
+      (row.id && byId.get(row.id)) // prefer Scryfall UUID match
+      ?? byKey.get(key);           // fall back to name+CI
 
-    byKey.set(key, {
-      id:
-        row.id ||
-        (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 10)),
-      name,
-      colourIdentity: ci,
-      scryfall: row.scryfallUri,
+    // Normalise dump fields we want to carry over
+    const cat = {
       image: row.image ?? null,
-      ...(row.partnerKind ? { partnerKind: row.partnerKind } : {}),
-      ...(Array.isArray(row.partnerWithNames)
-        ? { partnerWithNames: row.partnerWithNames }
-        : {}),
-        edhrecRank: row.edhrecRank ?? undefined,
-        edhrecUri: row.edhrecUri,
-    });
+      scryfall: row.scryfallUri ?? undefined,
+      edhrecRank: row.edhrecRank ?? undefined,
+      edhrecUri: row.edhrecUri ?? undefined,
+      partnerKind: row.partnerKind ?? undefined,
+      partnerWithNames: row.partnerWithNames ?? undefined,
+    } as const;
+
+    if (current) {
+      // Patch the existing record with catalogue fields (don’t touch user fields like tags)
+      const updated: Commander = {
+        ...current,
+        // keep user id/name/ci; update catalogue bits
+        image: cat.image ?? current.image ?? null,
+        scryfall: cat.scryfall ?? current.scryfall,
+        edhrecRank: cat.edhrecRank ?? current.edhrecRank,
+        edhrecUri: cat.edhrecUri ?? current.edhrecUri,
+        partnerKind: cat.partnerKind ?? current.partnerKind,
+        partnerWithNames: cat.partnerWithNames ?? current.partnerWithNames,
+      };
+      byId.set(updated.id, updated);
+      byKey.set(key, updated);
+    } else {
+      // New commander
+      const cmd: Commander = {
+        id:
+          row.id ||
+          (typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2, 10)),
+        name,
+        colourIdentity: ci,
+        image: cat.image ?? null,
+        scryfall: cat.scryfall,
+        edhrecRank: cat.edhrecRank,
+        edhrecUri: cat.edhrecUri,
+        partnerKind: cat.partnerKind,
+        partnerWithNames: cat.partnerWithNames,
+        // optional user fields stay empty by default
+        tags: (undefined as unknown as string[] | undefined), // or omit entirely if your type makes them optional
+      };
+      byId.set(cmd.id, cmd);
+      byKey.set(key, cmd);
+    }
   }
 
-  return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
+  // Return unique commanders (by id) in a stable order
+  const uniqueById = new Map<string, Commander>();
+  for (const c of byKey.values()) uniqueById.set(c.id, c);
+  return [...uniqueById.values()].sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -53,50 +53,45 @@ function toCommanderFromStored(u: unknown): Commander {
   const id =
     typeof r.id === "string"
       ? r.id
-      : typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2, 10);
+      : (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2, 10));
 
   const name = typeof r.name === "string" ? r.name : "";
-  const colourIdentity = canonicalCI(
-    typeof r.colourIdentity === "string" ? r.colourIdentity : ""
-  );
+  const colourIdentity = canonicalCI(typeof r.colourIdentity === "string" ? r.colourIdentity : "");
 
-  const scryfall = typeof r.scryfall === "string" ? r.scryfall : undefined;
-  const image = typeof r.image === "string" ? r.image : null;
-  const edhrecUri = typeof r.edhrecUri === "string" ? r.edhrecUri : undefined;
+  const scryfall    = typeof r.scryfall    === "string" ? r.scryfall    : undefined;
+  const image       = typeof r.image       === "string" ? r.image       : null;
+  const edhrecUri   = typeof r.edhrecUri   === "string" ? r.edhrecUri   : undefined;
+  const edhrecRank  = typeof r.edhrecRank  === "number" ? r.edhrecRank  : undefined;
 
   const partnerKind: PartnerKind =
-    (typeof r.partnerKind === "string"
-      ? (r.partnerKind as PartnerKind)
-      : "none") ?? "none";
+    typeof r.partnerKind === "string" ? (r.partnerKind as PartnerKind) : "none";
 
   const partnerWithNames = Array.isArray(r.partnerWithNames)
     ? (r.partnerWithNames as unknown[]).map(String)
     : undefined;
 
-  const tags = Array.isArray(r.tags)
-    ? (r.tags as unknown[]).map(String)
-    : undefined;
+  const tags = Array.isArray(r.tags) ? (r.tags as unknown[]).map(String) : undefined;
 
   let tagCounts: Record<string, number> | undefined;
   if (isRecord(r.tagCounts)) {
     const entries = Object.entries(r.tagCounts).map(([k, v]) => [k, Number(v)]);
-    tagCounts = Object.fromEntries(
-      entries.filter(([, n]) => Number.isFinite(n))
-    ) as Record<string, number>;
+    tagCounts = Object.fromEntries(entries.filter(([, n]) => Number.isFinite(n))) as Record<string, number>;
   }
+
   return {
     id,
     name,
     colourIdentity,
-    scryfall,
-    image,
-    ...(partnerKind ? { partnerKind } : {}),
-    ...(partnerWithNames ? { partnerWithNames } : {}),
-    ...(tags ? { tags } : {}),
+    ...(scryfall     ? { scryfall }     : {}),
+    ...(image !== null ? { image }      : { image: null }), // keep null explicit so UI knows there’s no image
+    ...(edhrecUri    ? { edhrecUri }    : {}),
+    ...(typeof edhrecRank === "number" ? { edhrecRank } : {}),
+    ...(partnerKind !== "none" ? { partnerKind } : {}),
+    ...(partnerWithNames && partnerWithNames.length ? { partnerWithNames } : {}),
+    ...(tags && tags.length ? { tags } : {}),
     ...(tagCounts ? { tagCounts } : {}),
-    edhrecUri,
   };
 }
 
@@ -178,13 +173,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        // 1) Merge commanders catalogue
         const dump = await loadCommandersJSON();
         let merged = mergeDumpIntoCommanders(dump, data.commanders);
 
-        // 2) Merge tags if present
         try {
-          const tags = await loadCommanderTags(); // returns {} if missing/404
+          const tags = await loadCommanderTags();
           merged = mergeTagsInto(merged, tags);
         } catch (e) {
           // Non-fatal
@@ -196,9 +189,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         console.warn("Auto-import failed:", err);
       }
     })();
-    // run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [data.commanders]);
 
   const api = useMemo<Ctx>(
     () => ({
