@@ -171,25 +171,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (bootRef.current) return;
     bootRef.current = true;
 
-    (async () => {
+    void (async () => {
       try {
         const dump = await loadCommandersJSON();
-        let merged = mergeDumpIntoCommanders(dump, data.commanders);
+
+        let tags:
+          | Awaited<ReturnType<typeof loadCommanderTags>>
+          | undefined;
 
         try {
-          const tags = await loadCommanderTags();
-          merged = mergeTagsInto(merged, tags);
+          tags = await loadCommanderTags();
         } catch (e) {
-          // Non-fatal
           console.warn("Tags load skipped:", e);
         }
 
-        setData((d) => ({ ...d, commanders: merged }));
+        setData((currentData) => {
+          let merged = mergeDumpIntoCommanders(
+            dump,
+            currentData.commanders
+          );
+
+          if (tags) {
+            merged = mergeTagsInto(merged, tags);
+          }
+
+          return {
+            ...currentData,
+            commanders: merged,
+          };
+        });
       } catch (err) {
         console.warn("Auto-import failed:", err);
       }
     })();
-  }, [data.commanders]);
+  }, []);
 
   const api = useMemo<Ctx>(
     () => ({

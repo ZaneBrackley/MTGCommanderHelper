@@ -5,6 +5,7 @@ import type { Commander, ChallengeChoice } from "../lib/types";
 import CardThumb from "../components/CardThumb";
 import { fold } from "../lib/text";
 import {
+  fetchLatestCommanders,
   loadCommandersJSON,
   mergeDumpIntoCommanders,
 } from "../services/loadCommanders";
@@ -333,6 +334,30 @@ export default function SearchPage() {
     }
   }, [data.commanders, replaceCommanders]);
 
+  const updateFromScryfall = useCallback(async () => {
+    try {
+      setImporting(true);
+      setStatus("Checking Scryfall for new commanders…");
+
+      const dump = await fetchLatestCommanders((loaded) => {
+        setStatus(`Loading commanders from Scryfall… ${loaded}`);
+      });
+
+      const merged = mergeDumpIntoCommanders(
+        dump,
+        data.commanders
+      );
+
+      replaceCommanders(merged);
+      setStatus(`Updated. Total commanders: ${merged.length}`);
+    } catch (e: unknown) {
+      setStatus(`Update failed: ${errorMessage(e)}`);
+      console.error(e);
+    } finally {
+      setImporting(false);
+    }
+  }, [data.commanders, replaceCommanders]);
+
   // Auto-import on first visit when there is no data yet
   useEffect(() => {
     if (!autoTried && data.commanders.length === 0) {
@@ -348,7 +373,7 @@ export default function SearchPage() {
         <div className="flex items-center justify-between">
           <span className="text-xs text-neutral-400">{status}</span>
           <button
-            onClick={importFromJSON}
+            onClick={updateFromScryfall}
             disabled={importing}
             className="px-4 py-2 rounded-md border border-neutral-700 hover:border-neutral-500 disabled:opacity-60"
           >

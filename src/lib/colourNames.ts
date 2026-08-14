@@ -36,15 +36,15 @@ const NAMES: Record<string, { name: string; alias?: string }> = {
   WUR: { name: "Jeskai" },
   UBG: { name: "Sultai" },
 
-  // Four-colour (Commander 2016) — use Sans-* as primary, Nephilim as alias
-  WUBR: { name: "Sans Green",  alias: "Yore-Tiller" },
-  UBRG: { name: "Sans White",  alias: "Glint-Eye" },
-  WBRG: { name: "Sans Blue",   alias: "Dune-Brood" },
-  WURG: { name: "Sans Black",  alias: "Ink-Treader" },
-  WUBG: { name: "Sans Red",    alias: "Witch-Maw" },
+  // Four-colour Nephilim
+  WUBR: { name: "Yore-Tiller" },
+  UBRG: { name: "Glint-Eye" },
+  WBRG: { name: "Dune-Brood" },
+  WURG: { name: "Ink-Treader" },
+  WUBG: { name: "Witch-Maw" },
 
   // Five-colour
-  WUBRG: { name: "Five-Colour", alias: "Domain" },
+  WUBRG: { name: "Domain" },
 };
 
 /** Get a nice display name for a colour identity. */

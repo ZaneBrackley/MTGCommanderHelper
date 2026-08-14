@@ -25,7 +25,16 @@ export default function ChallengePage() {
           const partner: Commander | undefined =
             choice?.partnerId ? data.commanders.find((c) => c.id === choice.partnerId) : undefined;
 
-          return <ChallengeTile key={ci} ci={ci} primary={primary} partner={partner} />;
+          return (
+            <ChallengeTile
+              key={`${ci}:${choice?.primaryId ?? "empty"}:${
+                choice?.partnerId ?? "solo"
+              }`}
+              ci={ci}
+              primary={primary}
+              partner={partner}
+            />
+          );
         })}
       </ul>
     </section>

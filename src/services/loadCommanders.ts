@@ -21,6 +21,134 @@ export type CommanderDump = {
   commanders: CommanderRow[];
 };
 
+const SCRYFALL_COMMANDER_SEARCH =
+  "https://api.scryfall.com/cards/search?q=" +
+  encodeURIComponent("is:commander legal:commander game:paper") +
+  "&unique=cards&order=edhrec";
+
+type ScryfallCard = {
+  id: string;
+  name: string;
+  color_identity?: string[];
+  image_uris?: { normal?: string; large?: string };
+  card_faces?: Array<{
+    image_uris?: { normal?: string; large?: string };
+  }>;
+  scryfall_uri?: string;
+  related_uris?: { edhrec?: string };
+  edhrec_rank?: number | null;
+  oracle_text?: string;
+  type_line?: string;
+  keywords?: string[];
+};
+
+type ScryfallPage = {
+  data: ScryfallCard[];
+  has_more: boolean;
+  next_page?: string;
+};
+
+function detectPartner(
+  card: ScryfallCard
+): Pick<CommanderRow, "partnerKind" | "partnerWithNames"> {
+  const keywords = card.keywords ?? [];
+  const oracleText = card.oracle_text ?? "";
+
+  if ((card.type_line ?? "").includes("Background")) {
+    return { partnerKind: "background" };
+  }
+
+  if (/Choose a Background/i.test(oracleText)) {
+    return { partnerKind: "chooseBackground" };
+  }
+
+  if (keywords.includes("Friends forever")) {
+    return { partnerKind: "friendsForever" };
+  }
+
+  const partnerWith = oracleText.match(/partner with ([^\n(]+)/i);
+
+  if (partnerWith) {
+    return {
+      partnerKind: "partnerWith",
+      partnerWithNames: [partnerWith[1].trim()],
+    };
+  }
+
+  if (keywords.includes("Partner")) {
+    return { partnerKind: "partner" };
+  }
+
+  return { partnerKind: "none" };
+}
+
+function mapScryfallCard(card: ScryfallCard): CommanderRow {
+  return {
+    id: card.id,
+    name: card.name.trim(),
+    colourIdentity: canonicalCI(card.color_identity ?? []),
+    image:
+      card.image_uris?.normal ??
+      card.card_faces?.[0]?.image_uris?.normal ??
+      card.image_uris?.large ??
+      card.card_faces?.[0]?.image_uris?.large ??
+      null,
+    scryfallUri: card.scryfall_uri,
+    edhrecRank: card.edhrec_rank,
+    edhrecUri: card.related_uris?.edhrec,
+    ...detectPartner(card),
+  };
+}
+
+export async function fetchLatestCommanders(
+  onProgress?: (loaded: number) => void
+): Promise<CommanderDump> {
+  let url: string | undefined = SCRYFALL_COMMANDER_SEARCH;
+  const byId = new Map<string, CommanderRow>();
+
+  while (url) {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error(`Scryfall request failed (${res.status})`);
+    }
+
+    const page = (await res.json()) as ScryfallPage;
+
+    if (!Array.isArray(page.data)) {
+      throw new Error("Scryfall returned an unexpected response");
+    }
+
+    for (const card of page.data) {
+      byId.set(card.id, mapScryfallCard(card));
+    }
+
+    onProgress?.(byId.size);
+    url = page.has_more ? page.next_page : undefined;
+
+    if (url) {
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+    }
+  }
+
+  const commanders = [...byId.values()].sort((a, b) => {
+    const rankA = a.edhrecRank ?? Number.POSITIVE_INFINITY;
+    const rankB = b.edhrecRank ?? Number.POSITIVE_INFINITY;
+
+    return rankA - rankB || a.name.localeCompare(b.name);
+  });
+
+  return {
+    source: SCRYFALL_COMMANDER_SEARCH,
+    generatedAt: new Date().toISOString(),
+    count: commanders.length,
+    commanders,
+  };
+}
+
 export type TagInfo = { tags?: string[]; tagCounts?: Record<string, number> };
 export type TagsFile =
   | { byId?: Record<string, TagInfo>; byKey?: Record<string, TagInfo> }

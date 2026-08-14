@@ -103,7 +103,13 @@ async function fetchAll() {
 
   let page = 1;
   while (url) {
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent":
+          "MTGCommanderHelper/1.0 (github.com/ZaneBrackley/MTGCommanderHelper)",
+      },
+    });
     if (res.status === 429) {
       const retry = Number(res.headers.get("Retry-After") || 1);
       console.warn(`[scryfall] Rate limited. Waiting ${retry}s…`);
@@ -151,12 +157,28 @@ async function fetchAll() {
 
 async function useCacheIfFresh() {
   try {
-    const s = await stat(OUTPUT_PATH);
-    if (Date.now() - s.mtimeMs < MAX_AGE_MS) {
-      console.log(`[build] Using cached ${OUTPUT_PATH} (fresh).`);
+    const cached = JSON.parse(
+      await readFile(OUTPUT_PATH, "utf8")
+    );
+
+    const generatedAt = new Date(
+      cached.generatedAt
+    ).getTime();
+
+    if (
+      Number.isFinite(generatedAt) &&
+      Date.now() - generatedAt < MAX_AGE_MS
+    ) {
+      console.log(
+        `[build] Using cached ${OUTPUT_PATH} (fresh).`
+      );
+
       return true;
     }
-  } catch {}
+  } catch {
+    // Missing or invalid cache, so rebuild it.
+  }
+
   return false;
 }
 
