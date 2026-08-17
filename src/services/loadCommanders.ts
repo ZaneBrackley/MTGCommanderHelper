@@ -12,6 +12,8 @@ export type CommanderRow = {
   edhrecUri?: string;
   partnerKind?: Commander["partnerKind"];
   partnerWithNames?: string[];
+  set?: string;
+  setName?: string;
 };
 
 export type CommanderDump = {
@@ -40,6 +42,8 @@ type ScryfallCard = {
   oracle_text?: string;
   type_line?: string;
   keywords?: string[];
+  set?: string;
+  set_name?: string;
 };
 
 type ScryfallPage = {
@@ -96,6 +100,8 @@ function mapScryfallCard(card: ScryfallCard): CommanderRow {
     scryfallUri: card.scryfall_uri,
     edhrecRank: card.edhrec_rank,
     edhrecUri: card.related_uris?.edhrec,
+    set: card.set,
+    setName: card.set_name,
     ...detectPartner(card),
   };
 }
@@ -192,6 +198,16 @@ export async function loadCommanderTags(): Promise<{
   return { byId, byKey };
 }
 
+export type RankInfo = { commanderRank?: number; commanderDecks?: number };
+
+export async function loadCommanderRanks(): Promise<Record<string, RankInfo>> {
+  const url = `${import.meta.env.BASE_URL}commander-ranks.json`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return {}; // no ranks file is fine
+  const data = (await res.json()) as { byKey?: Record<string, RankInfo> };
+  return data.byKey ?? {};
+}
+
 export function mergeDumpIntoCommanders(
   dump: CommanderDump,
   existing: Commander[]
@@ -223,6 +239,8 @@ export function mergeDumpIntoCommanders(
       edhrecUri: row.edhrecUri ?? undefined,
       partnerKind: row.partnerKind ?? undefined,
       partnerWithNames: row.partnerWithNames ?? undefined,
+      set: row.set ?? undefined,
+      setName: row.setName ?? undefined,
     } as const;
 
     if (current) {
@@ -236,6 +254,8 @@ export function mergeDumpIntoCommanders(
         edhrecUri: cat.edhrecUri ?? current.edhrecUri,
         partnerKind: cat.partnerKind ?? current.partnerKind,
         partnerWithNames: cat.partnerWithNames ?? current.partnerWithNames,
+        set: cat.set ?? current.set,
+        setName: cat.setName ?? current.setName,
       };
       byId.set(updated.id, updated);
       byKey.set(key, updated);
@@ -255,8 +275,9 @@ export function mergeDumpIntoCommanders(
         edhrecUri: cat.edhrecUri,
         partnerKind: cat.partnerKind,
         partnerWithNames: cat.partnerWithNames,
-        // optional user fields stay empty by default
-        tags: (undefined as unknown as string[] | undefined), // or omit entirely if your type makes them optional
+        set: cat.set,
+        setName: cat.setName,
+        tags: (undefined as unknown as string[] | undefined),
       };
       byId.set(cmd.id, cmd);
       byKey.set(key, cmd);

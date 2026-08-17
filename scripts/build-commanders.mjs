@@ -1,5 +1,5 @@
 // scripts/build-commanders.mjs
-import { writeFile, mkdir, stat } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -90,6 +90,8 @@ function mapCard(card) {
     scryfallUri: card.scryfall_uri,
     edhrecRank: card.edhrec_rank ?? null,
     edhrecUri: card.related_uris.edhrec,
+    set: card.set,
+    setName: card.set_name,
     ...partner,
   };
 }

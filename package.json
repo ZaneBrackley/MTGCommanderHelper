@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "build:data": "node scripts/build-commanders.mjs",
-    "build:tags": "node scripts/build-tags.mjs"
+    "build:tags": "node scripts/build-tags.mjs",
+    "build:ranks": "node scripts/build-commander-ranks.mjs"
   },
   "dependencies": {
     "react": "^19.1.1",

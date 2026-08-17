@@ -227,7 +227,21 @@ export default function SearchPage() {
   const [tagQ, setTagQ] = useState("");
   const [showAllTags, setShowAllTags] = useState(false);
 
-  const [sortBy, setSortBy] = useState<SortMode>("name:asc");
+  const [sortBy, setSortBy] = useState<SortMode>("edhrec:asc");
+
+  const [selectedSet, setSelectedSet] = useState<string>(""); // set code, "" = any
+
+  const setOptions = useMemo(() => {
+    const map = new Map<string, string>(); // code -> setName
+    for (const c of data.commanders) {
+      if (!c.set) continue;
+      const code = c.set.toLowerCase();
+      if (!map.has(code)) map.set(code, c.setName || code.toUpperCase());
+    }
+    return [...map.entries()]
+      .map(([code, setName]) => ({ code, setName }))
+      .sort((a, b) => a.setName.localeCompare(b.setName));
+  }, [data.commanders]);
 
   // Build a tag index from current data (folded key → { label, count })
   const tagIndex = useMemo(() => {
@@ -290,6 +304,7 @@ export default function SearchPage() {
     const filtered = data.commanders
       .filter((c) => !ql || fold(c.name).includes(ql))
       .filter((c) => !activeCI || c.colourIdentity === activeCI)
+      .filter((c) => !selectedSet || (c.set ?? "").toLowerCase() === selectedSet)
       .filter((c) => {
         if (selectedTags.length === 0) return true;
         const tags = (c.tags ?? []).map(fold);
@@ -301,18 +316,18 @@ export default function SearchPage() {
       if (sortBy === "name:asc") return a.name.localeCompare(b.name);
       if (sortBy === "name:desc") return b.name.localeCompare(a.name);
       if (sortBy === "edhrec:asc") {
-        const ar = a.edhrecRank ?? Number.POSITIVE_INFINITY;
-        const br = b.edhrecRank ?? Number.POSITIVE_INFINITY;
+        const ar = a.commanderRank ?? a.edhrecRank ?? Number.POSITIVE_INFINITY;
+        const br = b.commanderRank ?? b.edhrecRank ?? Number.POSITIVE_INFINITY;
         if (ar !== br) return ar - br;
-        return a.name.localeCompare(b.name);
+          return a.name.localeCompare(b.name);
       }
       // edhrec:desc
-      const ar = a.edhrecRank ?? -1;
-      const br = b.edhrecRank ?? -1;
+      const ar = a.commanderRank ?? a.edhrecRank ?? -1;
+      const br = b.commanderRank ?? b.edhrecRank ?? -1;
       if (ar !== br) return br - ar;
       return a.name.localeCompare(b.name);
-    });
-  }, [data.commanders, q, activeCI, selectedTags, sortBy]);
+      });
+  }, [data.commanders, q, activeCI, selectedSet, selectedTags, sortBy]);
 
   // Stable import function
   const importFromJSON = useCallback(async () => {
@@ -457,6 +472,22 @@ export default function SearchPage() {
             <option value="name:desc">Name Z→A</option>
             <option value="edhrec:asc">EDHREC Rank Ascending</option>
             <option value="edhrec:desc">EDHREC Rank Descending</option>
+          </select>
+        </div>
+        
+        <div>
+          <p className="text-sm text-neutral-400 mb-1">Filter by set</p>
+          <select
+            value={selectedSet}
+            onChange={(e) => setSelectedSet(e.target.value)}
+            className="px-2 py-1 rounded-md bg-neutral-800 border border-neutral-700 outline-none text-sm w-full"
+          >
+            <option value="">All sets</option>
+            {setOptions.map(({ code, setName }) => (
+              <option key={code} value={code}>
+                {setName} ({code.toUpperCase()})
+              </option>
+            ))}
           </select>
         </div>
 

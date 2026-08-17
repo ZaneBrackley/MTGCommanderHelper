@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# EDHREC ranks scrape debug output
+data/commander-ranks-debug.json

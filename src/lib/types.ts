@@ -10,6 +10,10 @@ export type Commander = {
   partnerWithNames?: string[];
   edhrecRank?: number;
   edhrecUri?: string;
+  commanderRank?: number;
+  commanderDecks?: number;
+  set?: string;
+  setName?: string;
 };
 
 export type ChallengeLock = Record<string, string>; // colourIdentity -> commanderId

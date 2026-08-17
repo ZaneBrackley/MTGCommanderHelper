@@ -17,8 +17,10 @@ import {
   loadCommandersJSON,
   mergeDumpIntoCommanders,
   loadCommanderTags,
+  loadCommanderRanks,
 } from "../services/loadCommanders";
-import type { TagInfo } from "../services/loadCommanders";
+import { fold } from "../lib/text";
+import type { TagInfo, RankInfo } from "../services/loadCommanders"; // ← RankInfo added
 
 // ---------------- Context types ----------------
 type Ctx = {
@@ -64,6 +66,10 @@ function toCommanderFromStored(u: unknown): Commander {
   const image       = typeof r.image       === "string" ? r.image       : null;
   const edhrecUri   = typeof r.edhrecUri   === "string" ? r.edhrecUri   : undefined;
   const edhrecRank  = typeof r.edhrecRank  === "number" ? r.edhrecRank  : undefined;
+  const set         = typeof r.set         === "string" ? r.set         : undefined;
+  const setName     = typeof r.setName     === "string" ? r.setName     : undefined;
+  const commanderRank  = typeof r.commanderRank  === "number" ? r.commanderRank  : undefined;
+  const commanderDecks = typeof r.commanderDecks === "number" ? r.commanderDecks : undefined;
 
   const partnerKind: PartnerKind =
     typeof r.partnerKind === "string" ? (r.partnerKind as PartnerKind) : "none";
@@ -88,11 +94,31 @@ function toCommanderFromStored(u: unknown): Commander {
     ...(image !== null ? { image }      : { image: null }), // keep null explicit so UI knows there’s no image
     ...(edhrecUri    ? { edhrecUri }    : {}),
     ...(typeof edhrecRank === "number" ? { edhrecRank } : {}),
+    ...(set     ? { set }     : {}),
+    ...(setName ? { setName } : {}),
     ...(partnerKind !== "none" ? { partnerKind } : {}),
     ...(partnerWithNames && partnerWithNames.length ? { partnerWithNames } : {}),
     ...(tags && tags.length ? { tags } : {}),
     ...(tagCounts ? { tagCounts } : {}),
+    ...(typeof commanderRank === "number" ? { commanderRank } : {}),
+    ...(typeof commanderDecks === "number" ? { commanderDecks } : {}),
   };
+}
+
+function mergeRanksInto(
+  list: Commander[],
+  ranks: Record<string, RankInfo>
+): Commander[] {
+  if (!list.length || !Object.keys(ranks).length) return list;
+  return list.map((c) => {
+    const info = ranks[fold(c.name)];
+    if (!info) return c;
+    return {
+      ...c,
+      ...(typeof info.commanderRank === "number" ? { commanderRank: info.commanderRank } : {}),
+      ...(typeof info.commanderDecks === "number" ? { commanderDecks: info.commanderDecks } : {}),
+    };
+  });
 }
 
 function mergeTagsInto(
@@ -178,27 +204,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         let tags:
           | Awaited<ReturnType<typeof loadCommanderTags>>
           | undefined;
-
         try {
           tags = await loadCommanderTags();
         } catch (e) {
           console.warn("Tags load skipped:", e);
         }
 
+        let ranks: Record<string, RankInfo> | undefined;
+        try {
+          ranks = await loadCommanderRanks();
+        } catch (e) {
+          console.warn("Ranks load skipped:", e);
+        }
+
         setData((currentData) => {
-          let merged = mergeDumpIntoCommanders(
-            dump,
-            currentData.commanders
-          );
+          let merged = mergeDumpIntoCommanders(dump, currentData.commanders);
 
-          if (tags) {
-            merged = mergeTagsInto(merged, tags);
-          }
+          if (tags) merged = mergeTagsInto(merged, tags);
+          if (ranks) merged = mergeRanksInto(merged, ranks);
 
-          return {
-            ...currentData,
-            commanders: merged,
-          };
+          return { ...currentData, commanders: merged };
         });
       } catch (err) {
         console.warn("Auto-import failed:", err);
